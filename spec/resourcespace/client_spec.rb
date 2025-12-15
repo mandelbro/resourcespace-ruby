@@ -157,6 +157,26 @@ RSpec.describe ResourceSpace::Client do
       result = client.get('get_system_status')
       expect(result).to eq({})
     end
+
+    it 'returns empty hash when API returns empty body for a different function' do
+      request_params = {
+        user: 'test_user',
+        function: 'get_users'
+      }
+    
+      query_string = request_params.map { |k, v| "#{k}=#{v}" }.join('&')
+      signature = Digest::SHA256.hexdigest("test_private_key_12345#{query_string}")
+      request_params[:sign] = signature
+      request_params[:authmode] = 'userkey'
+    
+      stub_request(:get, 'https://demo.resourcespace.com/api/')
+        .with(query: request_params)
+        .to_return(status: 200, body: '', headers: { 'Content-Type' => 'application/json' })
+    
+      result = client.get('get_users')
+      expect(result).to eq({})
+    end
+    
   end
 
   describe 'web asset specific functionality' do

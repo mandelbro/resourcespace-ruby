@@ -134,23 +134,33 @@ module ResourceSpace
       request_params = {
         user: config.user,
         function: function
-      }.merge(params)
+      }.merge(params.transform_keys(&:to_s))
 
       # Build query string for signing
       query_string = URI.encode_www_form(request_params.reject { |_k, v| v.is_a?(Faraday::UploadIO) })
 
+      # Sort parameters alphabetically
+      # signing_params = signing_params.sort.to_h
+
+      # by key only
+      # signing_params = signing_params.sort_by { |k, _| k.to_s }.to_h
+
+      # query_string = signing_params.map { |k, v| "#{k}=#{v}" }.join('&')
+
       # Generate signature
       signature = generate_signature(query_string)
       request_params[:sign] = signature
-      request_params[:authmode] = config.auth_mode
+      request_params[:authmode] = config.auth_mode if config.auth_mode
+
+      full_url = "#{config.url}?#{query_string}&sign=#{signature}"
 
       # Make the request
       response = if method == :get
-                   connection.get('', request_params)
+                   connection.get(full_url)
                  elsif multipart
-                   connection.post('', request_params)
+                   connection.post(full_url)
                  else
-                   connection.post('', URI.encode_www_form(request_params))
+                   connection.post(full_url)
                  end
 
       handle_response(response)
